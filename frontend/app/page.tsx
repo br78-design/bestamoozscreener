@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 interface FilterParameter {
   name: string;
   type: string;
@@ -43,10 +41,15 @@ export default function HomePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/filters`)
-      .then((res) => res.json())
+    // نکته: مسیرها نسبی هستند و با next.config.js به backend rewrite می‌شوند
+    fetch(`/api/filters`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch filters');
+        return res.json();
+      })
       .then((data: FilterDefinition[]) => {
         setFilters(data);
+
         const defaults: Record<string, SelectedFilter> = {};
         data.forEach((f) => {
           defaults[f.id] = {
@@ -57,6 +60,7 @@ export default function HomePage() {
             }, {}),
           };
         });
+
         setSelected(defaults);
       })
       .catch(() => setError('مشکل در دریافت فیلترها'));
@@ -108,18 +112,22 @@ export default function HomePage() {
   const runScreener = async () => {
     setLoading(true);
     setError('');
+
     try {
       const payload = {
         filters: selectedFilters,
       };
-      const res = await fetch(`${API_BASE}/api/screener/run`, {
+
+      const res = await fetch(`/api/screener/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
       if (!res.ok) {
         throw new Error('خطا در اجرای فیلتر');
       }
+
       const data: ScreenerResult[] = await res.json();
       setResults(data);
     } catch (e) {
@@ -142,9 +150,11 @@ export default function HomePage() {
         <div className="lg:col-span-1 space-y-4">
           <div className="bg-white rounded-xl shadow p-4">
             <h2 className="font-semibold mb-3">فیلترهای آماده</h2>
+
             <div className="space-y-3">
               {filters.map((filter) => {
                 const enabled = Boolean(selected[filter.id]);
+
                 return (
                   <div
                     key={filter.id}
@@ -157,10 +167,13 @@ export default function HomePage() {
                           {filter.description}
                         </p>
                       </div>
+
                       <input
                         type="checkbox"
                         checked={enabled}
-                        onChange={(e) => toggleFilter(filter.id, e.target.checked)}
+                        onChange={(e) =>
+                          toggleFilter(filter.id, e.target.checked)
+                        }
                         className="h-4 w-4 mt-1"
                       />
                     </div>
@@ -172,7 +185,9 @@ export default function HomePage() {
                             key={param.name}
                             className="flex flex-col text-xs gap-1"
                           >
-                            <span className="text-slate-600">{param.description}</span>
+                            <span className="text-slate-600">
+                              {param.description}
+                            </span>
                             <input
                               type="number"
                               defaultValue={param.default as any}
@@ -204,6 +219,7 @@ export default function HomePage() {
           >
             {loading ? 'در حال پردازش...' : 'اعمال فیلتر'}
           </button>
+
           {error && <p className="text-red-600 text-sm">{error}</p>}
         </div>
 
@@ -217,6 +233,7 @@ export default function HomePage() {
                   : 'هنوز فیلتری اجرا نشده است'}
               </p>
             </div>
+
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-slate-700">
@@ -231,14 +248,19 @@ export default function HomePage() {
                     <th className="px-3 py-2 text-left">علت تطابق</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {results.map((row) => (
                     <tr key={row.symbol} className="border-b hover:bg-slate-50">
                       <td className="px-3 py-2 font-semibold">{row.symbol}</td>
                       <td className="px-3 py-2">{row.company_name}</td>
-                      <td className="px-3 py-2">{row.last_price.toLocaleString()}</td>
+                      <td className="px-3 py-2">
+                        {row.last_price.toLocaleString()}
+                      </td>
                       <td className="px-3 py-2">{row.volume.toLocaleString()}</td>
-                      <td className="px-3 py-2">{row.trade_value.toLocaleString()}</td>
+                      <td className="px-3 py-2">
+                        {row.trade_value.toLocaleString()}
+                      </td>
                       <td className="px-3 py-2">{row.percent_change}%</td>
                       <td className="px-3 py-2">
                         {new Date(row.last_updated).toLocaleString('fa-IR')}
@@ -246,9 +268,13 @@ export default function HomePage() {
                       <td className="px-3 py-2 text-indigo-700">{row.reason}</td>
                     </tr>
                   ))}
+
                   {results.length === 0 && (
                     <tr>
-                      <td className="px-3 py-6 text-center text-slate-500" colSpan={8}>
+                      <td
+                        className="px-3 py-6 text-center text-slate-500"
+                        colSpan={8}
+                      >
                         نتیجه‌ای برای نمایش وجود ندارد.
                       </td>
                     </tr>

@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: ./backend
+    container_name: bestamoozscreener-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MOCK_DATA_FILE=/app/seed/symbols_seed.json
+
+  frontend:
+    build: ./frontend
+    container_name: bestamoozscreener-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev

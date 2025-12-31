@@ -12,8 +12,11 @@ def run_screener(
 
     for symbol in symbols:
         symbol_id = symbol["symbol"]
-        snapshot = provider.get_snapshot(symbol_id)
-        history = provider.get_history(symbol_id, lookback=120)
+        try:
+            snapshot = provider.get_snapshot(symbol_id)
+            history = provider.get_history(symbol_id, lookback=120)
+        except Exception:
+            continue
         symbol_data = {**snapshot, "history": history}
 
         passed_all = True

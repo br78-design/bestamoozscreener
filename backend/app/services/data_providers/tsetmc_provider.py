@@ -22,36 +22,36 @@ class TsetmcMarketDataProvider(MarketDataProvider):
     def _build_url(self, path: str, with_prefix: bool) -> str:
         path = path.lstrip("/")
         if with_prefix and self.api_prefix:
+            if self.base_url.endswith(self.api_prefix):
+                return f"{self.base_url}/{path}"
             return f"{self.base_url}{self.api_prefix}/{path}"
         return f"{self.base_url}/{path}"
 
     def _fetch_json(self, path: str) -> Any:
-        url = self._build_url(path, with_prefix=True)
-        request = Request(
-            url,
-            headers={
-                "User-Agent": "bestamoozscreener/1.0",
-                "Accept": "application/json",
-            },
-        )
-        try:
-            with urlopen(request, timeout=15) as response:
-                payload = response.read().decode("utf-8")
-            return json.loads(payload)
-        except HTTPError as exc:
-            if exc.code != 404:
-                raise
-        fallback_url = self._build_url(path, with_prefix=False)
-        fallback_request = Request(
-            fallback_url,
-            headers={
-                "User-Agent": "bestamoozscreener/1.0",
-                "Accept": "application/json",
-            },
-        )
-        with urlopen(fallback_request, timeout=15) as response:
-            payload = response.read().decode("utf-8")
-        return json.loads(payload)
+        urls = [
+            self._build_url(path, with_prefix=True),
+            self._build_url(path, with_prefix=False),
+        ]
+        seen = set()
+        for url in urls:
+            if url in seen:
+                continue
+            seen.add(url)
+            request = Request(
+                url,
+                headers={
+                    "User-Agent": "bestamoozscreener/1.0",
+                    "Accept": "application/json",
+                },
+            )
+            try:
+                with urlopen(request, timeout=15) as response:
+                    payload = response.read().decode("utf-8")
+                return json.loads(payload)
+            except HTTPError as exc:
+                if exc.code != 404:
+                    raise
+        raise HTTPError(urls[-1], 404, "Not Found", hdrs=None, fp=None)
 
     def _extract_list(self, data: Any) -> List[Dict[str, Any]]:
         if isinstance(data, list):
@@ -89,7 +89,19 @@ class TsetmcMarketDataProvider(MarketDataProvider):
         cached = self.instrument_cache.get("instruments")
         if cached:
             return cached
-        data = self._fetch_json("Instrument/GetInstrumentList/0")
+        data = None
+        for path in (
+            "Instrument/GetInstrumentList/0",
+            "Instrument/GetInstrumentList",
+            "Instrument/GetInstrumentList/1",
+        ):
+            try:
+                data = self._fetch_json(path)
+                break
+            except HTTPError:
+                continue
+        if data is None:
+            raise HTTPError("Instrument/GetInstrumentList/0", 404, "Not Found", hdrs=None, fp=None)
         items = self._extract_list(data)
         instruments = []
         for item in items:

@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     mock_data_file: str = "backend/seed/symbols_seed.json"
     cache_ttl_seconds: int = 60
     data_provider: str = "tsetmc"
-    tsetmc_base_url: str = "https://cdn.tsetmc.com"
-    tsetmc_api_prefix: str = "/api"
+    tsetmc_base_url: str = "https://cdn.tsetmc.com/api"
+    tsetmc_api_prefix: str = ""
     tsetmc_max_symbols: int = 120
 
     class Config:

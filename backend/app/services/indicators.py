@@ -42,3 +42,28 @@ def macd(values: List[float], fast: int = 12, slow: int = 26, signal: int = 9):
         "signal_line": signal_line,
         "histogram": histogram,
     }
+
+
+def rsi(values: List[float], window: int = 14) -> List[float]:
+    if window <= 0:
+        raise ValueError("window must be positive")
+    if len(values) < window + 1:
+        raise ValueError("Not enough data for RSI calculation")
+    gains = []
+    losses = []
+    for i in range(1, len(values)):
+        delta = values[i] - values[i - 1]
+        gains.append(max(delta, 0))
+        losses.append(abs(min(delta, 0)))
+    avg_gain = sum(gains[:window]) / window
+    avg_loss = sum(losses[:window]) / window
+    rs_values = []
+    rsi_values = [float("nan")] * window
+    for i in range(window, len(gains)):
+        if i > window:
+            avg_gain = (avg_gain * (window - 1) + gains[i]) / window
+            avg_loss = (avg_loss * (window - 1) + losses[i]) / window
+        rs = avg_gain / avg_loss if avg_loss != 0 else float("inf")
+        rs_values.append(rs)
+        rsi_values.append(100 - (100 / (1 + rs)))
+    return rsi_values
